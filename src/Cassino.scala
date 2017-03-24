@@ -6,6 +6,7 @@ class Cassino extends PApplet {
 
   val playerCount = 4
   var mouse = new Mouse(this)
+  var mouseHover: Boolean = false
 
   override def setup() = {
     loadImages
@@ -29,12 +30,9 @@ class Cassino extends PApplet {
     background(0, 120, 0)
     updateCards
     drawCards
-//    println(Game.players(0).hand.map(_.value).mkString(","))
     if(Game.players(0).hand.find(_.active).isDefined)
-//      println(Board.cards.map(_.value).mkString(","))
       whichCards
-    for (card <- Board.cards){
-//      println(Board.cards.map(_.value).mkString(","))      
+    for (card <- Board.cards){    
     	image(card.img, width / 2 + (Board.cards.indexOf(card) - 2) * (card.width + 5), height / 2 , card.width, card.height)
     }
     noFill
@@ -55,9 +53,7 @@ class Cassino extends PApplet {
   }
   
   def getCards(from: Buffer[Card], to: Buffer[Card], sum: Int, initialSum: Int): Unit = {
-    println("ujj")
     if(to.map(_.value).sum == initialSum){
-      println("moi: " + to.mkString)
     }else{
       for(card <- from){
         to += card        
@@ -69,17 +65,22 @@ class Cassino extends PApplet {
 
   def drawCards = {
     for (card <- Game.players(0).hand) {
-      pushMatrix()
-      translate(width / 2 - 55, height / 2)
-      card.x = 15 * Game.players(0).hand.indexOf(card)
-      card.y = 220
-      if (mouse.hover(width / 2 - 55 + card.x, height / 2 + card.y, card.width, card.height, card == Game.players(0).hand(Game.players(0).hand.size - 1))) {
+      card.x = width / 2 - 55 + 15 * Game.players(0).hand.indexOf(card)
+      card.y = height / 2 + 220
+      mouseHover = mouse.hover(card.x, card.y, card.width, card.height, card == Game.players(0).hand(Game.players(0).hand.size - 1))
+      if(mouseHover) {
         card.y -= 20
         card.active = true
-      } else
-        card.active = false
+      }else{        
+    	  card.active = false
+      }
+      
+      if(mouseHover && mousePressed){
+        card.x = mouseX - card.width / 2
+        card.y = mouseY - card.height / 2
+      }
+        
       image(card.img, card.x, card.y, card.width, card.height)
-      popMatrix()
     }
 
     for (player <- 1 until Game.players.size) {
