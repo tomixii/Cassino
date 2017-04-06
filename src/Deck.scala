@@ -2,6 +2,7 @@ import scala.collection.mutable.Buffer
 import scala.util.Random
 import processing.core._
 import scala.collection.mutable.HashMap
+import scala.collection.mutable.Stack
 
 object Deck {
   
@@ -63,7 +64,7 @@ object Deck {
   
   var cardback = new PImage
   
-  var deck = Buffer[Card]()
+  var deck = Stack[Card]()
   var cardImages = Map[String, PImage]()
   var cardStrings = Buffer[String]("h01", "s01", "d01", "c01",
                                    "h02", "s02", "d02", "c02",
@@ -81,7 +82,7 @@ object Deck {
   
   def shuffleDeck = {
     for(i <- 0 until 52){
-    	deck += new Card(i / 4 + 1, i % 4, i, this.cardImages(cardStrings(i)))
+    	deck.push(new Card(i / 4 + 1, i % 4, i, this.cardImages(cardStrings(i))))
     }
     deck = Random.shuffle(deck)
   }

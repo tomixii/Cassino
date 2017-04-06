@@ -8,8 +8,11 @@ class Player {
   
   def drawCard(card: Card){
      hand += card
-     Deck.deck -= card
-     
+     Deck.deck.pop   
+  }
+  
+  def discard(card: Card){
+    hand -= card
   }
   
   def addPoint = points += 1

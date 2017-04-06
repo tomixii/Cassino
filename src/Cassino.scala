@@ -7,6 +7,7 @@ class Cassino extends PApplet {
   val playerCount = 4
   var mouse = new Mouse(this)
   var mouseHover: Boolean = false
+  
 
   override def setup() = {
     loadImages
@@ -29,63 +30,74 @@ class Cassino extends PApplet {
   override def draw() = {
     background(0, 120, 0)
     updateCards
-    drawCards
-    if(Game.players(0).hand.find(_.active).isDefined)
+    renderCards
+    if (Game.players(0).hand.find(_.active).isDefined)
       whichCards
-    for (card <- Board.cards){    
-    	image(card.img, width / 2 + (Board.cards.indexOf(card) - 2) * (card.width + 5), height / 2 , card.width, card.height)
-    }
+    
     noFill
-    rect(420, 190, 300, 300)
+    rect(Board.x, Board.y, Board.width, Board.height)
     fill(255, 0, 0)
     text("X: " + mouseX + "\n" + "Y: " + mouseY, mouseX + 20, mouseY)
 
   }
-  
+
   def whichCards = {
-    for(card <- Game.players(0).hand){
+    for(card <- Game.players(0).hand) {
       getCards(Board.cards, Buffer[Card](), card.valueOnHand, card.valueOnHand)
     }
   }
-  
-  def updateCards = {
-    
-  }
-  
-  def getCards(from: Buffer[Card], to: Buffer[Card], sum: Int, initialSum: Int): Unit = {
-    if(to.map(_.value).sum == initialSum){
-    }else{
-      for(card <- from){
-        to += card        
-    	  getCards(from.filter(_ != card), to, sum - card.value, initialSum)
-      }
-    }
-      
+
+  def renderCards = {
+    for(card <- Board.cards)
+      image(card.img, width / 2 + (Board.cards.indexOf(card) - 2) * (card.width + 5), height / 2, card.width, card.height)
+    for(card <- Game.players(0).hand.filter(!_.active))
+      image(card.img, card.x, card.y, card.width, card.height)
+    for(card <- Game.players(0).hand.filter(_.active))
+      image(card.img, card.x, card.y, card.width, card.height)
   }
 
-  def drawCards = {
+  def getCards(from: Buffer[Card], to: Buffer[Card], sum: Int, initialSum: Int): Unit = {
+    if (to.map(_.value).sum == initialSum) {
+    } else {
+      for (card <- from) {
+        to += card
+        getCards(from.filter(_ != card), to, sum - card.value, initialSum)
+      }
+    }
+
+  }
+
+  def updateCards = {
+
     for (card <- Game.players(0).hand) {
-      card.x = width / 2 - 55 + 15 * Game.players(0).hand.indexOf(card)
-      card.y = height / 2 + 220
-      mouseHover = mouse.hover(card.x, card.y, card.width, card.height, card == Game.players(0).hand(Game.players(0).hand.size - 1))
-      if(mouseHover) {
-        card.y -= 20
-        card.active = true
-      }else{        
-    	  card.active = false
+      card.active = mouse.hover(card.x, card.y, card.width, card.height) && 
+                    !Game.players(0).hand.drop(Game.players(0).hand.indexOf(card)+1).exists(_.active) &&
+                    !Game.players(0).hand.filterNot(_ == card).exists(_.isPressed)
+      if (card.active || card.isPressed) {
+        if (mousePressed) {
+          card.x = mouseX - card.width / 2
+          card.y = mouseY - card.height / 2
+          card.isPressed = true
+        } else{
+          if(mouse.hover(Board.x, Board.y, Board.width, Board.height)){
+            Board.addCard(card)
+            Game.players(0).discard(card)
+          }else{
+        	  card.x = width / 2 - 55 + 15 * Game.players(0).hand.indexOf(card)
+    			  card.y = height / 2 + 200
+    			  card.isPressed = false            
+          }
+        }      
+      } else {
+        card.x = width / 2 - 55 + 15 * Game.players(0).hand.indexOf(card)
+        card.y = height / 2 + 220
       }
       
-      if(mouseHover && mousePressed){
-        card.x = mouseX - card.width / 2
-        card.y = mouseY - card.height / 2
-      }
-        
-      image(card.img, card.x, card.y, card.width, card.height)
     }
 
     for (player <- 1 until Game.players.size) {
       for (card <- Game.players(player).hand) {
-        card.x = (Math.cos((player * (360 / playerCount) + 90).toRadians)).toFloat - 60  + 15 * Game.players(player).hand.indexOf(card) 
+        card.x = (Math.cos((player * (360 / playerCount) + 90).toRadians)).toFloat - 60 + 15 * Game.players(player).hand.indexOf(card)
         card.y = (Math.sin((player * (360 / playerCount) + 90).toRadians)).toFloat + 220
         pushMatrix()
         translate(width / 2, height / 2)
@@ -167,20 +179,20 @@ class Cassino extends PApplet {
     Deck.cardback = loadImage("cardback.png")
 
     Deck.cardImages = Map[String, PImage]("h01" -> Deck.h01, "s01" -> Deck.s01, "d01" -> Deck.d01, "c01" -> Deck.c01,
-                                         "h02" -> Deck.h02, "s02" -> Deck.s02, "d02" -> Deck.d02, "c02" -> Deck.c02,
-                                         "h03" -> Deck.h03, "s03" -> Deck.s03, "d03" -> Deck.d03, "c03" -> Deck.c03,
-                                         "h04" -> Deck.h04, "s04" -> Deck.s04, "d04" -> Deck.d04, "c04" -> Deck.c04,
-                                         "h05" -> Deck.h05, "s05" -> Deck.s05, "d05" -> Deck.d05, "c05" -> Deck.c05,
-                                         "h06" -> Deck.h06, "s06" -> Deck.s06, "d06" -> Deck.d06, "c06" -> Deck.c06,
-                                         "h07" -> Deck.h07, "s07" -> Deck.s07, "d07" -> Deck.d07, "c07" -> Deck.c07,
-                                         "h08" -> Deck.h08, "s08" -> Deck.s08, "d08" -> Deck.d08, "c08" -> Deck.c08,
-                                         "h09" -> Deck.h09, "s09" -> Deck.s09, "d09" -> Deck.d09, "c09" -> Deck.c09,
-                                         "h10" -> Deck.h10, "s10" -> Deck.s10, "d10" -> Deck.d10, "c10" -> Deck.c10,
-                                         "h11" -> Deck.h11, "s11" -> Deck.s11, "d11" -> Deck.d11, "c11" -> Deck.c11,
-                                         "h12" -> Deck.h12, "s12" -> Deck.s12, "d12" -> Deck.d12, "c12" -> Deck.c12,
-                                         "h13" -> Deck.h13, "s13" -> Deck.s13, "d13" -> Deck.d13, "c13" -> Deck.c13)
-  
-//     println(Deck.cardImages.keys)
+                                          "h02" -> Deck.h02, "s02" -> Deck.s02, "d02" -> Deck.d02, "c02" -> Deck.c02,
+                                          "h03" -> Deck.h03, "s03" -> Deck.s03, "d03" -> Deck.d03, "c03" -> Deck.c03,
+                                          "h04" -> Deck.h04, "s04" -> Deck.s04, "d04" -> Deck.d04, "c04" -> Deck.c04,
+                                          "h05" -> Deck.h05, "s05" -> Deck.s05, "d05" -> Deck.d05, "c05" -> Deck.c05,
+                                          "h06" -> Deck.h06, "s06" -> Deck.s06, "d06" -> Deck.d06, "c06" -> Deck.c06,
+                                          "h07" -> Deck.h07, "s07" -> Deck.s07, "d07" -> Deck.d07, "c07" -> Deck.c07,
+                                          "h08" -> Deck.h08, "s08" -> Deck.s08, "d08" -> Deck.d08, "c08" -> Deck.c08,
+                                          "h09" -> Deck.h09, "s09" -> Deck.s09, "d09" -> Deck.d09, "c09" -> Deck.c09,
+                                          "h10" -> Deck.h10, "s10" -> Deck.s10, "d10" -> Deck.d10, "c10" -> Deck.c10,
+                                          "h11" -> Deck.h11, "s11" -> Deck.s11, "d11" -> Deck.d11, "c11" -> Deck.c11,
+                                          "h12" -> Deck.h12, "s12" -> Deck.s12, "d12" -> Deck.d12, "c12" -> Deck.c12,
+                                          "h13" -> Deck.h13, "s13" -> Deck.s13, "d13" -> Deck.d13, "c13" -> Deck.c13)
+
+    //     println(Deck.cardImages.keys)
   }
 
 }

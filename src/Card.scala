@@ -4,6 +4,7 @@ import processing.core._
 
 class Card(val value: Int, val suit: Int, val number: Int, val img: PImage) {
   var active: Boolean = false
+  var isPressed = false
   var x = 0f
   var y = 0f
   var width = 70
