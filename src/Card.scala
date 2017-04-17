@@ -5,6 +5,9 @@ import processing.core._
 class Card(val value: Int, val suit: Int, val number: Int, val img: PImage) {
   var active: Boolean = false
   var isPressed = false
+  var selected = false
+  var pressForPoints = false
+  var clicktimer = 0
   var x = 0f
   var y = 0f
   var width = 70
@@ -20,4 +23,6 @@ class Card(val value: Int, val suit: Int, val number: Int, val img: PImage) {
     else
       value
   }
+  
+  
 }

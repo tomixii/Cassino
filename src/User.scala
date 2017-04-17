@@ -1,5 +1,6 @@
+import processing.core._
 
-
-class User extends Player{
+class User(p: PApplet) extends Player(p: PApplet){
+   
   
 }

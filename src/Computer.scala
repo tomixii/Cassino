@@ -1,5 +1,5 @@
+import processing.core._
 
-
-class Computer extends Player{
+class Computer(p: PApplet) extends Player(p: PApplet){
   
 }

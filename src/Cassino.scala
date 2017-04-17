@@ -1,26 +1,35 @@
 import processing.core._
 import scala.collection.mutable.Buffer
 import scala.collection.mutable.HashMap
+import scala.math._
 
 class Cassino extends PApplet {
 
-  val playerCount = 4
+  
   var mouse = new Mouse(this)
   var mouseHover: Boolean = false
+  var debugCounter = 0
+  var computerCounter = 0
+  var playedCard: Option[Card] = None
+  var clicked = false
+  var debug = false
+  var nextPlayer = false
+  var emptyList = Buffer[Card]()
   
-
   override def setup() = {
     loadImages
     Deck.shuffleDeck
-    Game.addPlayer(false, new User)
-    for (i <- 0 until playerCount - 1)
-      Game.addPlayer(true, new Computer)
+    Game.addPlayer(false, new User(this))
+    for (i <- 0 until Game.playerCount - 1)
+      Game.addPlayer(true, new Computer(this))
     for (player <- Game.players) {
       for (a <- 0 until 4)
         player.drawCard(Deck.deck(0))
     }
-    for (i <- 0 to 3)
-      Board.addCard(Deck.deck(0))
+    for (i <- 0 to 3){
+    	Board.addCard(Deck.deck(0))
+    	Deck.deck.pop      
+    }
   }
 
   override def settings() = {
@@ -30,86 +39,152 @@ class Cassino extends PApplet {
   override def draw() = {
     background(0, 120, 0)
     updateCards
+    updateHand
     renderCards
-    if (Game.players(0).hand.find(_.active).isDefined)
-      whichCards
-    
     noFill
+    strokeWeight(2)
+    stroke(0,0,0)
     rect(Board.x, Board.y, Board.width, Board.height)
     fill(255, 0, 0)
-    text("X: " + mouseX + "\n" + "Y: " + mouseY, mouseX + 20, mouseY)
-
-  }
-
-  def whichCards = {
-    for(card <- Game.players(0).hand) {
-      getCards(Board.cards, Buffer[Card](), card.valueOnHand, card.valueOnHand)
+    text("X: " + mouseX + "\n" + "Y: " + mouseY, mouseX + 20, mouseY)  
+    if(debugCounter == 60 && debug){
+      for(player <- Game.players)
+        println(Game.players.indexOf(player) + ": " + player.collected.map(_.valueOnHand))
+      println("turn: " + Game.turn)
+//      println("player hand size: " + Game.players(0).hand.size)      
+      println("board selected sum: " + Board.cards.filter(_.selected).map(_.value).sum)
+    }
+    if(debugCounter == 61) debugCounter = 0
+    debugCounter += 1
+    if(nextPlayer){
+      nextPlayer = false      
+    	Game.nextTurn
     }
   }
 
   def renderCards = {
-    for(card <- Board.cards)
-      image(card.img, width / 2 + (Board.cards.indexOf(card) - 2) * (card.width + 5), height / 2, card.width, card.height)
-    for(card <- Game.players(0).hand.filter(!_.active))
-      image(card.img, card.x, card.y, card.width, card.height)
-    for(card <- Game.players(0).hand.filter(_.active))
-      image(card.img, card.x, card.y, card.width, card.height)
-  }
-
-  def getCards(from: Buffer[Card], to: Buffer[Card], sum: Int, initialSum: Int): Unit = {
-    if (to.map(_.value).sum == initialSum) {
-    } else {
-      for (card <- from) {
-        to += card
-        getCards(from.filter(_ != card), to, sum - card.value, initialSum)
+    for(card <- Board.cards){
+    	if(card.selected){
+    		noFill 	  
+    		strokeWeight(5)
+    		stroke(255, 0, 0)
+    		rect(card.x ,card.y , card.width, card.height)
+    		
+    	}
+    	image(card.img,card.x ,card.y , card.width, card.height)
+    }
+    for(card <- Game.players(0).hand.filter(!_.active)){
+      if(Board.cards.filter(_.selected).map(_.value).sum == card.valueOnHand){
+        card.pressForPoints = true
+    	  rect(card.x ,card.y , card.width, card.height)
+      }
+    	image(card.img, card.x, card.y, card.width, card.height)
+    }
+    for(card <- Game.players(0).hand.filter(_.active)){
+    	if(Board.cards.filter(_.selected).map(_.value).sum == card.valueOnHand){
+        card.pressForPoints = true
+    	  rect(card.x ,card.y , card.width, card.height)
+      }
+   		image(card.img, card.x, card.y, card.width, card.height)     
+    }
+    for(player <- 1 until Game.playerCount){
+      for( card <- Game.players(player).hand){
+        card.x = (Math.cos((player * (360 / Game.playerCount) + 90).toRadians)).toFloat - 60 + 15 * Game.players(player).hand.indexOf(card)
+        card.y = (Math.sin((player * (360 / Game.playerCount) + 90).toRadians)).toFloat + 220
+          
+        pushMatrix()
+        translate(width / 2, height / 2)
+        rotate((player * (360 / Game.playerCount)).toRadians.toFloat)
+        image(card.img, card.x, card.y, card.width, card.height)
+        popMatrix()
       }
     }
-
   }
 
   def updateCards = {
-
-    for (card <- Game.players(0).hand) {
-      card.active = mouse.hover(card.x, card.y, card.width, card.height) && 
-                    !Game.players(0).hand.drop(Game.players(0).hand.indexOf(card)+1).exists(_.active) &&
-                    !Game.players(0).hand.filterNot(_ == card).exists(_.isPressed)
-      if (card.active || card.isPressed) {
-        if (mousePressed) {
-          card.x = mouseX - card.width / 2
-          card.y = mouseY - card.height / 2
-          card.isPressed = true
-        } else{
-          if(mouse.hover(Board.x, Board.y, Board.width, Board.height)){
-            Board.addCard(card)
-            Game.players(0).discard(card)
-          }else{
-        	  card.x = width / 2 - 55 + 15 * Game.players(0).hand.indexOf(card)
-    			  card.y = height / 2 + 200
-    			  card.isPressed = false            
-          }
-        }      
-      } else {
-        card.x = width / 2 - 55 + 15 * Game.players(0).hand.indexOf(card)
-        card.y = height / 2 + 220
+    for(card <- Board.cards){
+      if(mouse.hover(card.x, card.y, card.width, card.height) && mousePressed && card.clicktimer == 0){
+        card.selected = !card.selected
+        card.clicktimer = 10
       }
+      card.clicktimer = max(card.clicktimer - 1, 0)
       
+    	card.x = Board.x + (Board.cards.indexOf(card)) % 4 * (card.width + 7)
+			card.y = Board.y + (Board.cards.indexOf(card)) / 4 * (card.height + 7)
     }
-
-    for (player <- 1 until Game.players.size) {
-      for (card <- Game.players(player).hand) {
-        card.x = (Math.cos((player * (360 / playerCount) + 90).toRadians)).toFloat - 60 + 15 * Game.players(player).hand.indexOf(card)
-        card.y = (Math.sin((player * (360 / playerCount) + 90).toRadians)).toFloat + 220
-        pushMatrix()
-        translate(width / 2, height / 2)
-        rotate((player * (360 / playerCount)).toRadians.toFloat)
-        image(Deck.cardback, card.x, card.y, card.width, card.height)
-        popMatrix()
-
+    if(Game.turn == 0 || Game.players(0).updateOnce){
+      if(Game.players(0).updateOnce)
+    	  Game.players(0).updateOnce = false
+      for (card <- Game.players(0).hand) {
+        card.active = mouse.hover(card.x, card.y, card.width, card.height) && 
+                      !Game.players(0).hand.drop(Game.players(0).hand.indexOf(card) + 1).exists(_.active) &&
+                      !Game.players(0).hand.filterNot(_ == card).exists(_.isPressed)
+        if ((card.active || card.isPressed)) {
+          if (mousePressed) {
+            if(card.pressForPoints){
+              playedCard = Some(card)
+//              Game.players(0).collect(playedCard.get)
+//              for(taken <- (Board.cards.filter(_.selected) :+ playedCard.get))
+              Game.players(0).takeCards((Board.cards.filter(_.selected) :+ playedCard.get))
+              nextPlayer = true
+              Game.players(0).setUp(Game.players(0).hand.last)
+            }else{
+            	card.x = mouseX - card.width / 2
+        			card.y = mouseY - card.height / 2
+        			card.isPressed = true
+            }
+          }else{
+            if(mouse.hover(Board.x, Board.y, Board.width, Board.height)){
+              Board.addCard(card)
+              playedCard = Some(card)
+              nextPlayer = true
+              Game.players(0).setUp(card)
+            }else{
+          	  Game.players(0).setUp(card)
+            }
+            card.isPressed = false            
+          }      
+        } else {
+          Game.players(0).setDown(card)
+        }
       }
     }
+    if(Game.turn > 0){
+      if(computerCounter == 120){
+        for (card <- Game.players(Game.turn).hand) {
+          var poss = Board.takeCards(Board.cards, emptyList, card.valueOnHand, card.valueOnHand)
+          println(card.valueOnHand + " = " + poss.map(_.map(_.value)))
+          Game.players(Game.turn).possibilities = Game.players(Game.turn).possibilities ++ Board.findPossibilities(card, poss)
+          Board.res.clear()
+          emptyList.clear()       
+        }
+        var cards = Game.players(Game.turn).chooseBest
+        if(cards.isDefined){
+          playedCard = Some(cards.get.last)          
+        	Game.players(Game.turn).takeCards(cards.get)
+        }
+        else{
+          var card = Game.players(Game.turn).hand.head
+        	playedCard = Some(card)
+        	Board.addCard(card)          
+        }
+        Game.players(Game.turn).possibilities.clear()
+        nextPlayer = true
+        
+      }
+      if(computerCounter == 120) computerCounter = 0 else computerCounter += 1
+    }  
   }
 
-  def loadImages {
+  def updateHand = {
+    if(playedCard.isDefined){
+      println("playcard")
+      Game.players(Game.turn).removeCard(playedCard.get)
+      playedCard = None
+    }
+  }
+  
+  def loadImages = {
 
     Deck.h01 = loadImage("ace_of_hearts.png")
     Deck.s01 = loadImage("ace_of_spades.png")

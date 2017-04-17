@@ -6,4 +6,14 @@ class Mouse(p: PApplet) {
     var w = width
     p.mouseX > x && p.mouseX < x + w && p.mouseY > y && p.mouseY < y + height 
   }
+  
+  def clicked: Boolean = {
+    if(p.mousePressed)
+      if(!p.mousePressed)
+        true
+      else 
+        false
+    else
+      false
+  }
 }
