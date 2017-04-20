@@ -2,15 +2,21 @@ import scala.collection.mutable.Buffer
 import processing.core._
 
 
-class Player(p: PApplet) {
+class Player(p: PApplet, val name: String) {
   
   var hand = Buffer[Card]()
-  var points: Int = 0
   var score: Int = 0
+  var cottages: Int = 0
+  var collected = Buffer[Card]()
+  def scoreCount: Int = score
+  def spadeCount: Int = collected.filter(_.suit == 1).size  
+  def aceCount: Int = collected.filter(_.value == 1).size
+  def cardCount: Int = collected.size
+  def cottageCount: Int = cottages
   var updateOnce = false
   var loop = 0
-  var collected = Buffer[Card]()
   var possibilities = Buffer[(Card, Buffer[Buffer[Card]])]()
+  def points = Vector[String](name, scoreCount.toString, spadeCount.toString, aceCount.toString, cardCount.toString, cottageCount.toString) 
   
   def drawCard(card: Card){
      hand += card
@@ -26,7 +32,7 @@ class Player(p: PApplet) {
     Board.removeCard(cards)
   }
 
-  def addPoint = points += 1
+  def addScore = score += 1
   
   def deactivateAll = {
 //    println("deactivate")
@@ -48,9 +54,6 @@ class Player(p: PApplet) {
     card.y = p.height / 2 + 220 //down position y
   }
   
-  def spadeCount: Int = collected.filter(_.suit == 1).size
-  
-  def cardCount: Int = collected.size
   
   def pointCount(pair: (Card,Buffer[Buffer[Card]])): Double = {
     var count = 0.0

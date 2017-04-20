@@ -2,6 +2,7 @@ import processing.core._
 import scala.collection.mutable.Buffer
 import scala.collection.mutable.HashMap
 import scala.math._
+import java.awt.event.KeyEvent._
 
 class Cassino extends PApplet {
 
@@ -14,18 +15,17 @@ class Cassino extends PApplet {
   var clicked = false
   var debug = true
   var nextPlayer = false
+  
   var emptyList = Buffer[Card]()
   
   override def setup() = {
     loadImages
     Deck.shuffleDeck
-    Game.addPlayer(false, new User(this))
-    for(card <- Deck.deck)
-      Game.bestCardsToPlay += card
+    Game.addPlayer(false, new User(this, "Player 1"))
     for (i <- 0 until Game.playerCount - 1)
-      Game.addPlayer(true, new Computer(this))
+      Game.addPlayer(true, new Computer(this, "Player " + (i + 2)))
     for (player <- Game.players) {
-      for (a <- 0 until 4)
+      for (i <- 0 until 4)
         player.drawCard(Deck.deck(0))
     }
     for (i <- 0 to 3){
@@ -48,6 +48,8 @@ class Cassino extends PApplet {
     strokeWeight(2)
     stroke(0,0,0)
     rect(Board.x, Board.y, Board.width, Board.height)
+    fill(160,160,160, 230)
+    if(Scoreboard.isPressed) showScores
     fill(255, 0, 0)
     text("X: " + mouseX + "\n" + "Y: " + mouseY, mouseX + 20, mouseY)  
     if(debugCounter == 60 && debug){
@@ -60,10 +62,14 @@ class Cassino extends PApplet {
     }
     if(debugCounter == 61) debugCounter = 0
     debugCounter += 1
-    if(nextPlayer){
+    if(Game.players.forall(_.hand.isEmpty)){
+       Game.endOfRound
+    }else if(nextPlayer){
       nextPlayer = false      
     	Game.nextTurn
-    	
+    }
+    if(!Game.gameIsOn){     
+    	println("Game over! Winner is " + Game.winner)
     }
   }
 
@@ -166,7 +172,7 @@ class Cassino extends PApplet {
       }
     }
     if(Game.turn > 0){
-      if(computerCounter == 120){
+      if(/*computerCounter == 120*/true){
     	  Game.players(Game.turn).sortHand
         for (card <- Game.players(Game.turn).hand) {
           card.checkFor    
@@ -200,6 +206,40 @@ class Cassino extends PApplet {
       Game.players(Game.turn).removeCard(playedCard.get)
       playedCard = None
     }
+  }
+  
+  def showScores = {
+	  rect(Scoreboard.x, Scoreboard.y, Scoreboard.width, Scoreboard.height)
+	  stroke(0,0,0, 230)
+	  fill(0,0,0,230)
+	  for(i <- 1 to Game.playerCount + 1){
+		  line(Scoreboard.x + 20, Scoreboard.y + i * 40, Scoreboard.x + Scoreboard.width - 20, Scoreboard.y + i * 40)
+	  }
+	  for(i <- 1 to 5){
+		  line(Scoreboard.x + i * 150 , Scoreboard.y + 20, Scoreboard.x + i * 150, Scoreboard.y + + Scoreboard.height - 20)
+		}
+	  for(i <- 0 until 5){
+		  text(Scoreboard.pointStrings(i), Scoreboard.x + (i + 1) * 150 + 5, Scoreboard.y + 30) 	    	    
+	  }
+	    
+	  for(i <- 0 until Game.playerCount){
+	    for(j <- 0 until 6)
+	      text(Game.players(i).points(j), Scoreboard.x + 150 * j + 25, Scoreboard.y + (i + 1) * 40 + 30 )
+	  }
+  }
+  
+  override def keyPressed() = {
+	  
+	  if(keyCode == VK_TAB){
+	    Scoreboard.isPressed = true
+	  }
+  }  
+  
+  override def keyReleased() = {
+	  
+	  if(keyCode == VK_TAB){
+	    Scoreboard.isPressed = false
+	  }
   }
   
   def loadImages = {
