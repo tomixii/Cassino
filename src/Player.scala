@@ -8,6 +8,7 @@ class Player(p: PApplet) {
   var points: Int = 0
   var score: Int = 0
   var updateOnce = false
+  var loop = 0
   var collected = Buffer[Card]()
   var possibilities = Buffer[(Card, Buffer[Buffer[Card]])]()
   
@@ -28,13 +29,13 @@ class Player(p: PApplet) {
   def addPoint = points += 1
   
   def deactivateAll = {
-    println("deactivate")
+//    println("deactivate")
     for(card <- hand){
       card.x = p.width / 2 - 55 + 15 * Game.players(0).hand.indexOf(card)
       card.y = p.height / 2 + 220      
     	card.active = false
     }
-    println(hand.exists(_.active))  
+//    println(hand.exists(_.active))  
   }
   
   def setUp(card: Card) = {
@@ -48,6 +49,8 @@ class Player(p: PApplet) {
   }
   
   def spadeCount: Int = collected.filter(_.suit == 1).size
+  
+  def cardCount: Int = collected.size
   
   def pointCount(pair: (Card,Buffer[Buffer[Card]])): Double = {
     var count = 0.0
@@ -70,9 +73,16 @@ class Player(p: PApplet) {
       None
   }
   
-//  def findWorstCard: Card = {
-//    hand.filter(x => x.valueOnHand < 14 && x.suit != 1).sortBy(_.valueOnHand) ++ hand.filter(_.suit == 1).sortBy(_.valueOnHand) ++ 
-//  }
+  def sortHand = {
+    hand = this.hand.sortBy(_.valueOnHand)
+    var fine     = this.hand.filter(x => x.suit != 1 && (x.valueOnHand + Board.cards.map(_.value).sum > 16) && x.valueOnHand <= 13)
+    var tooSmall = this.hand.filter(x => x.suit != 1 && (x.valueOnHand + Board.cards.map(_.value).sum <= 16) && x.valueOnHand <= 13)
+    var spades   = this.hand.filter(x => x.suit == 1 && x.valueOnHand < 14)
+    var aces     = this.hand.filter(x => x.suit != 1 && x.valueOnHand == 14)
+    var topCards = this.hand.filter(x => x.valueOnHand >= 15 || (x.valueOnHand == 14 && x.suit == 1))
+//    println(fine.map(_.valueOnHand) + "+" + tooSmall.map(_.valueOnHand) + "+" + spades.map(_.valueOnHand) + "+" + aces.map(_.valueOnHand) + "+" + topCards.map(_.valueOnHand))
+    hand = fine ++ tooSmall ++ spades ++ aces ++ topCards
+  }
 
                  
 //    var diamonds10 = Buffer[Buffer[Buffer[Card]]]()

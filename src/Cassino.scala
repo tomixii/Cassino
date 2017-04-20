@@ -12,7 +12,7 @@ class Cassino extends PApplet {
   var computerCounter = 0
   var playedCard: Option[Card] = None
   var clicked = false
-  var debug = false
+  var debug = true
   var nextPlayer = false
   var emptyList = Buffer[Card]()
   
@@ -20,6 +20,8 @@ class Cassino extends PApplet {
     loadImages
     Deck.shuffleDeck
     Game.addPlayer(false, new User(this))
+    for(card <- Deck.deck)
+      Game.bestCardsToPlay += card
     for (i <- 0 until Game.playerCount - 1)
       Game.addPlayer(true, new Computer(this))
     for (player <- Game.players) {
@@ -30,6 +32,7 @@ class Cassino extends PApplet {
     	Board.addCard(Deck.deck(0))
     	Deck.deck.pop      
     }
+    
   }
 
   override def settings() = {
@@ -48,17 +51,19 @@ class Cassino extends PApplet {
     fill(255, 0, 0)
     text("X: " + mouseX + "\n" + "Y: " + mouseY, mouseX + 20, mouseY)  
     if(debugCounter == 60 && debug){
-      for(player <- Game.players)
-        println(Game.players.indexOf(player) + ": " + player.collected.map(_.valueOnHand))
-      println("turn: " + Game.turn)
+//      for(player <- Game.players)
+//        println(Game.players.indexOf(player) + ": " + player.collected.map(_.valueOnHand))
+//      println("turn: " + Game.turn)
 //      println("player hand size: " + Game.players(0).hand.size)      
-      println("board selected sum: " + Board.cards.filter(_.selected).map(_.value).sum)
+//      println("board selected sum: " + Board.cards.filter(_.selected).map(_.value).sum)
+//      println(Board.cards.filter(_.selected).map(_.value))
     }
     if(debugCounter == 61) debugCounter = 0
     debugCounter += 1
     if(nextPlayer){
       nextPlayer = false      
     	Game.nextTurn
+    	
     }
   }
 
@@ -74,15 +79,13 @@ class Cassino extends PApplet {
     	image(card.img,card.x ,card.y , card.width, card.height)
     }
     for(card <- Game.players(0).hand.filter(!_.active)){
-      if(Board.cards.filter(_.selected).map(_.value).sum == card.valueOnHand){
-        card.pressForPoints = true
+      if(card.pressForPoints){
     	  rect(card.x ,card.y , card.width, card.height)
       }
     	image(card.img, card.x, card.y, card.width, card.height)
     }
     for(card <- Game.players(0).hand.filter(_.active)){
-    	if(Board.cards.filter(_.selected).map(_.value).sum == card.valueOnHand){
-        card.pressForPoints = true
+    	if(card.pressForPoints){
     	  rect(card.x ,card.y , card.width, card.height)
       }
    		image(card.img, card.x, card.y, card.width, card.height)     
@@ -99,6 +102,15 @@ class Cassino extends PApplet {
         popMatrix()
       }
     }
+//    for(player <- 0 until Game.playerCount){
+//      for(card <- Game.players(player).collected){
+//        image(Deck.cardback, card.x, card.y, card.width, card.height)
+//      }
+//    }
+    fill(0, 0, 0)
+    textSize(24)
+    for(player <- 0 until Game.playerCount)
+      text(Game.players(player).collected.size, 20, player * 30 + 40)
   }
 
   def updateCards = {
@@ -119,6 +131,10 @@ class Cassino extends PApplet {
         card.active = mouse.hover(card.x, card.y, card.width, card.height) && 
                       !Game.players(0).hand.drop(Game.players(0).hand.indexOf(card) + 1).exists(_.active) &&
                       !Game.players(0).hand.filterNot(_ == card).exists(_.isPressed)
+        if(Game.players(0).loop <= 4){
+          card.checkFor              
+          Game.players(0).loop += 1
+        }
         if ((card.active || card.isPressed)) {
           if (mousePressed) {
             if(card.pressForPoints){
@@ -151,34 +167,36 @@ class Cassino extends PApplet {
     }
     if(Game.turn > 0){
       if(computerCounter == 120){
+    	  Game.players(Game.turn).sortHand
         for (card <- Game.players(Game.turn).hand) {
-          var poss = Board.takeCards(Board.cards, emptyList, card.valueOnHand, card.valueOnHand)
-          println(card.valueOnHand + " = " + poss.map(_.map(_.value)))
-          Game.players(Game.turn).possibilities = Game.players(Game.turn).possibilities ++ Board.findPossibilities(card, poss)
-          Board.res.clear()
-          emptyList.clear()       
+          card.checkFor    
         }
         var cards = Game.players(Game.turn).chooseBest
         if(cards.isDefined){
           playedCard = Some(cards.get.last)          
         	Game.players(Game.turn).takeCards(cards.get)
-        }
-        else{
+        }else{
           var card = Game.players(Game.turn).hand.head
         	playedCard = Some(card)
         	Board.addCard(card)          
         }
-        Game.players(Game.turn).possibilities.clear()
+        
         nextPlayer = true
         
       }
       if(computerCounter == 120) computerCounter = 0 else computerCounter += 1
     }  
+//    for(player <- 0 until Game.playerCount){
+//      for(card <- Game.players(player).collected){
+//        card.x = Game.players(player).collected.indexOf(card) * 15 + 10
+//        card.y = player * card.height + 10  
+//      }
+//    }
   }
 
   def updateHand = {
     if(playedCard.isDefined){
-      println("playcard")
+//      println("playcard")
       Game.players(Game.turn).removeCard(playedCard.get)
       playedCard = None
     }
