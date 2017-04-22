@@ -86,4 +86,8 @@ object Deck {
     }
     deck = Random.shuffle(deck)
   }
+	
+	def addCard(card: Card) = {
+	  deck.push(card)
+	}
 }

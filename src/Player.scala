@@ -2,12 +2,8 @@ import scala.collection.mutable.Buffer
 import processing.core._
 
 
-class Player(p: PApplet, val name: String) {
+class Player(val name: String, var hand: Buffer[Card], var collected: Buffer[Card], var score: Int, var cottages: Int) {
   
-  var hand = Buffer[Card]()
-  var score: Int = 0
-  var cottages: Int = 0
-  var collected = Buffer[Card]()
   def scoreCount: Int = score
   def spadeCount: Int = collected.filter(_.suit == 1).size  
   def aceCount: Int = collected.filter(_.value == 1).size
@@ -30,28 +26,26 @@ class Player(p: PApplet, val name: String) {
   def takeCards(cards: Buffer[Card]) = {
     collected = collected ++ cards
     Board.removeCard(cards)
+    if(Board.cards.isEmpty) cottages += 1
   }
 
   def addScore = score += 1
   
   def deactivateAll = {
-//    println("deactivate")
     for(card <- hand){
-      card.x = p.width / 2 - 55 + 15 * Game.players(0).hand.indexOf(card)
-      card.y = p.height / 2 + 220      
+      setDown(card)     
     	card.active = false
     }
-//    println(hand.exists(_.active))  
   }
   
   def setUp(card: Card) = {
-    card.x = p.width / 2 - 55 + 15 * Game.players(0).hand.indexOf(card)
-    card.y = p.height / 2 + 200 //up position y
+    card.x = 15 *(34 + Game.players(0).hand.indexOf(card))
+    card.y = 540 //up position y
   }
   
   def setDown(card: Card) = {
-    card.x = p.width / 2 - 55 + 15 * Game.players(0).hand.indexOf(card)
-    card.y = p.height / 2 + 220 //down position y
+    card.x = 15 * (34 + Game.players(0).hand.indexOf(card))
+    card.y = 560 //down position y
   }
   
   

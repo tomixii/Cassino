@@ -6,5 +6,5 @@ object Scoreboard {
   val width = 940
   val height = 480
   var isPressed = false
-  val pointStrings = Vector[String]("KOKO PELI", "PADAT", "ÄSSÄT", "YHT.", "MÖKIT")
+  val pointStrings = Vector[String]("SCORE", "SPADES", "ACES", "COLLECTED", "SWEEPS")
 }
