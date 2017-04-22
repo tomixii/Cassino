@@ -1,26 +1,26 @@
 #Player 1
-hand: h07,s12,s10,s01
-collected: s04,d04,c11,d11,h04,c06,c10,h03,s03
+hand: s02
+collected: s04,h12,d10,h11,s11,d12,s12,d07,s07
 score: 0
 cottages: 0
 #Player 2
-hand: h08,c09,d10,s13
-collected: d13,c13,d02,h12,h01
-score: 9
-cottages: 1
+hand: s06
+collected: h05,c09,c01,h10,s10,h08,d08,d11,c11,h13,c13
+score: 0
+cottages: 2
 #Player 3
-hand: h11,d12,s09,h09
-collected: c03,c04,d07,c07,h02,c02
-score: 1
+hand: s01
+collected: 
+score: 0
 cottages: 0
 #Player 4
-hand: d09,s11,c01,d08
-collected: d01,s01,c01,s03,s06
-score: 3
-cottages: 0
+hand: s05
+collected: d04,h04,c08,h03,d05,s08,d02,c02,d06,c06,d03,s03,c05,d09,d01,h06,c07,d13,h02,c03,c04,h09,h01,c12,s13
+score: 0
+cottages: 4
 #GAME
-board: c05,c08
-deck: d05,s07,d01,s05,h10,s08,d06,h13,s02,h06,c12,s06,d03,h05
+board: h07,s09,c10
+deck: 
 turn: 0
 dealer: 0
 playerCount: 4

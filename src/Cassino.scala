@@ -11,32 +11,35 @@ class Cassino extends PApplet {
   var mouse = new Mouse(this)
   var counter = 0
   var computerCounter = 0
+  var changeCounter = 0
   var playedCard: Option[Card] = None
   var debug = false
   var nextPlayer = false
   var state = State.STARTMENU
+  var lastState = State.STARTMENU
+  var changingRound = false
 
   override def setup() = {
     loadImages
   }
-  
+
   def newGame = {
     Game.players.clear
     Deck.deck.clear
     Board.cards.clear
-	  Deck.shuffleDeck
-	  Game.addPlayer(false, new Player("Player 1", Buffer[Card](), Buffer[Card](), 0, 0))
-	  Game.dealer = Some(Game.players.head)
-	  for (i <- 0 until Game.playerCount - 1)
-		  Game.addPlayer(true, new Player("Player " + (i + 2), Buffer[Card](), Buffer[Card](), 0, 0))
-	  for (player <- Game.players) {
-		  for (i <- 0 until 4)
-			  player.drawCard(Deck.deck(0))
-	  }
-	  for (i <- 0 to 3) {
-		  Board.addCard(Deck.deck(0))
-		  Deck.deck.pop
-	  }
+    Deck.shuffleDeck
+    Game.addPlayer(false, new Player("Player 1", Buffer[Card](), Buffer[Card](), 0, 0))
+    Game.dealer = Some(Game.players.head)
+    for (i <- 0 until Game.playerCount - 1)
+      Game.addPlayer(true, new Player("Player " + (i + 2), Buffer[Card](), Buffer[Card](), 0, 0))
+    for (player <- Game.players) {
+      for (i <- 0 until 4)
+        player.drawCard(Deck.deck(0))
+    }
+    for (i <- 0 to 3) {
+      Board.addCard(Deck.deck(0))
+      Deck.deck.pop
+    }
     state = State.GAME
   }
 
@@ -47,41 +50,78 @@ class Cassino extends PApplet {
   override def draw() = {
     background(0, 120, 0)
     if (state == State.GAME) {
-      updateCards
-      updateHand
-      renderCards
-      noFill
-      strokeWeight(2)
-      stroke(0, 0, 0)
-      rect(Board.x, Board.y, Board.width, Board.height)
-      if (Scoreboard.isPressed) showScores
-      if (counter == 60 && debug) {
-        for (player <- Game.players)
-          println(Game.players.indexOf(player) + ": " + player.collected.map(_.valueOnHand))
-        println("turn: " + Game.turn)
-        println("player hand size: " + Game.players(0).hand.size)
-        println("board selected sum: " + Board.cards.filter(_.selected).map(_.value).sum)
-        println(Board.cards.filter(_.selected).map(_.value))
-      }
-      if (!Deck.deck.isEmpty && Game.players(Game.turn).hand.size < 4) Game.players(Game.turn).drawCard(Deck.deck(0))
-      if (Game.players.forall(_.hand.isEmpty) && Game.gameIsOn) {
-        Game.endOfRound
-      } else if (nextPlayer) {
-        nextPlayer = false
-        Game.nextTurn
-      }
-      if (!Game.gameIsOn) {
-        println("Game over! Winner is " + Game.winner)
-      }
+      if (Game.gameIsOn) {
+        if (!changingRound) {
+          updateCards
+        }
+        if (changingRound) {
+          if (changeCounter % 60 == 0) {
+            for (i <- 0 until Game.players.size) {
+              Game.players(i).drawCard(Deck.deck(0))
+              if (i == 0) Game.players(i).setDown(Game.players(i).hand.last)
+            }
+            Board.addCard(Deck.deck(0))
+            Deck.deck.pop
+          }
+          if (changeCounter == 239) {
+            changeCounter = 0
+            changingRound = false
+          } else
+            changeCounter += 1
 
-    } else if (state == State.STARTMENU || state == State.PAUSEMENU){
+        }
+        updateHand
+        renderCards
+        noFill
+        strokeWeight(2)
+        stroke(0, 0, 0)
+        rect(Board.x, Board.y, Board.width, Board.height)
+        if (Scoreboard.isPressed || changingRound) showScores
+        if (counter == 60 && debug) {
+          for (player <- Game.players)
+            println(Game.players.indexOf(player) + ": " + player.collected.map(_.valueOnHand))
+          println("turn: " + Game.turn)
+          println("player hand size: " + Game.players(0).hand.size)
+          println("board selected sum: " + Board.cards.filter(_.selected).map(_.value).sum)
+          println(Board.cards.filter(_.selected).map(_.value))
+        }
+        if (!Deck.deck.isEmpty && Game.players(Game.turn).hand.size < 4 && !changingRound)
+          Game.players(Game.turn).drawCard(Deck.deck(0))
+        if (Game.players.forall(_.hand.isEmpty) && Game.gameIsOn) {
+          Game.endOfRound
+          changingRound = true
+        } else if (nextPlayer) {
+          nextPlayer = false
+          Game.nextTurn
+        }
+      } else {
+        if(changeCounter < 30){
+        	fill(255,0,0)
+        	textSize(80)
+        	text("Game over! Winner is " + Game.winner, 200, 80)          
+        }
+        showScores
+        if(changeCounter == 60) changeCounter = 0 else changeCounter += 1
+      }
+      fill(160, 160, 160, 230)
+      rect(950, 10, 180, 80)
+      fill(0, 0, 0, 230)
+      textSize(40)
+      text("Menu", 990, 65)
+    } else if (state == State.STARTMENU || state == State.PAUSEMENU) {
       showMenu
+    } else if (state == State.HELP) {
+      fill(160, 160, 160, 230)
+      rect(10, 10, 180, 80)
+      fill(0, 0, 0, 230)
+      textSize(40)
+      text("Back", 50, 65)
     }
-    
 
     handleButtons
 
     fill(255, 0, 0)
+    textSize(24)
     text("X: " + mouseX + "\n" + "Y: " + mouseY, mouseX + 20, mouseY)
     if (counter == 61) counter = 0
     counter += 1
@@ -89,6 +129,14 @@ class Cassino extends PApplet {
 
   def renderCards = {
     for (card <- Board.cards) {
+      if (mouse.hover(card.x, card.y, card.width, card.height) && mousePressed && card.clicktimer == 0) {
+        card.selected = !card.selected
+        card.clicktimer = 10
+      }
+      card.clicktimer = max(card.clicktimer - 1, 0)
+
+      card.x = Board.x + (Board.cards.indexOf(card)) % 4 * (card.width + 7)
+      card.y = Board.y + (Board.cards.indexOf(card)) / 4 * (card.height + 7)
       if (card.selected) {
         noFill
         strokeWeight(5)
@@ -125,16 +173,6 @@ class Cassino extends PApplet {
   }
 
   def updateCards = {
-    for (card <- Board.cards) {
-      if (mouse.hover(card.x, card.y, card.width, card.height) && mousePressed && card.clicktimer == 0) {
-        card.selected = !card.selected
-        card.clicktimer = 10
-      }
-      card.clicktimer = max(card.clicktimer - 1, 0)
-
-      card.x = Board.x + (Board.cards.indexOf(card)) % 4 * (card.width + 7)
-      card.y = Board.y + (Board.cards.indexOf(card)) / 4 * (card.height + 7)
-    }
     if (Game.turn == 0 || Game.players(0).updateOnce) {
       if (Game.players(0).updateOnce)
         Game.players(0).updateOnce = false
@@ -197,17 +235,10 @@ class Cassino extends PApplet {
       }
       if (computerCounter == 120) computerCounter = 0 else computerCounter += 1
     }
-    //    for(player <- 0 until Game.playerCount){
-    //      for(card <- Game.players(player).collected){
-    //        card.x = Game.players(player).collected.indexOf(card) * 15 + 10
-    //        card.y = player * card.height + 10  
-    //      }
-    //    }
   }
 
   def updateHand = {
     if (playedCard.isDefined) {
-      //      println("playcard")
       Game.players(Game.turn).removeCard(playedCard.get)
       playedCard = None
     }
@@ -241,48 +272,55 @@ class Cassino extends PApplet {
       rect(Scoreboard.x + ((Game.buttonWidth + 140) * (i % 2)), Scoreboard.y + ((Game.buttonHeight + 80) * (i / 2)), Game.buttonWidth, Game.buttonHeight)
       fill(0, 0, 0, 230)
       textSize(40)
-      if(state == State.STARTMENU)
+      if (state == State.STARTMENU)
         text(Game.startStrings(i), Scoreboard.x + ((Game.buttonWidth + 140) * (i % 2)) + Game.buttonWidth / 2 - 10 * Game.startStrings(i).length(), Scoreboard.y + ((Game.buttonHeight + 80) * (i / 2)) + Game.buttonHeight / 2 + 15)
-      else if(state == State.PAUSEMENU)
+      else if (state == State.PAUSEMENU)
         text(Game.pauseStrings(i), Scoreboard.x + ((Game.buttonWidth + 140) * (i % 2)) + Game.buttonWidth / 2 - 10 * Game.pauseStrings(i).length(), Scoreboard.y + ((Game.buttonHeight + 80) * (i / 2)) + Game.buttonHeight / 2 + 15)
     }
   }
-  
-  def nextRoundButton = {
-    //    rect()
-    stroke(0, 0, 0, 230)
-    fill(0, 0, 0, 230)
-  }
-  
+
   def handleButtons = {
-    if(state == State.STARTMENU && mousePressed){
-      if(mouse.hover(Scoreboard.x, Scoreboard.y, Game.buttonWidth, Game.buttonHeight)){ //Load game
+    if (state == State.STARTMENU && mousePressed) {
+      if (mouse.hover(Scoreboard.x, Scoreboard.y, Game.buttonWidth, Game.buttonHeight)) { //Load game
         var data = ""
-        for(line <- Source.fromFile("Savefile.txt").getLines())
+        for (line <- Source.fromFile("Savefile.txt").getLines())
           data = data + line + "\n"
-        println(data)  
+        println(data)
         Load.loadGame(new StringReader(data))
-          state = State.GAME
-      }else if(mouse.hover(Scoreboard.x + ((Game.buttonWidth + 140)), Scoreboard.y, Game.buttonWidth, Game.buttonHeight)){ //New Game
+        state = State.GAME
+      } else if (mouse.hover(Scoreboard.x + ((Game.buttonWidth + 140)), Scoreboard.y, Game.buttonWidth, Game.buttonHeight)) { //New Game
         newGame
-      }else if(mouse.hover(Scoreboard.x, Scoreboard.y + ((Game.buttonHeight + 80)), Game.buttonWidth, Game.buttonHeight)){ //Help
+      } else if (mouse.hover(Scoreboard.x, Scoreboard.y + ((Game.buttonHeight + 80)), Game.buttonWidth, Game.buttonHeight)) { //Help
         state = State.HELP
-      }else if(mouse.hover(Scoreboard.x + ((Game.buttonWidth + 140)), Scoreboard.y + ((Game.buttonHeight + 80)), Game.buttonWidth, Game.buttonHeight)){ //Exit
+      } else if (mouse.hover(Scoreboard.x + ((Game.buttonWidth + 140)), Scoreboard.y + ((Game.buttonHeight + 80)), Game.buttonWidth, Game.buttonHeight)) { //Exit
         sys.exit()
       }
-    }else if(state == State.PAUSEMENU && mousePressed){
-      if(mouse.hover(Scoreboard.x, Scoreboard.y, Game.buttonWidth, Game.buttonHeight)){ //Continue
+    } else if (state == State.PAUSEMENU && mousePressed) {
+      if (mouse.hover(Scoreboard.x, Scoreboard.y, Game.buttonWidth, Game.buttonHeight)) { //Continue
         state = State.GAME
-      }else if(mouse.hover(Scoreboard.x + ((Game.buttonWidth + 140)), Scoreboard.y, Game.buttonWidth, Game.buttonHeight)){ //New Game
+      } else if (mouse.hover(Scoreboard.x + ((Game.buttonWidth + 140)), Scoreboard.y, Game.buttonWidth, Game.buttonHeight)) { //New Game
         newGame
-      }else if(mouse.hover(Scoreboard.x, Scoreboard.y + ((Game.buttonHeight + 80)), Game.buttonWidth, Game.buttonHeight)){ //Help
+      } else if (mouse.hover(Scoreboard.x, Scoreboard.y + ((Game.buttonHeight + 80)), Game.buttonWidth, Game.buttonHeight)) { //Help
         state = State.HELP
-      }else if(mouse.hover(Scoreboard.x + ((Game.buttonWidth + 140)), Scoreboard.y + ((Game.buttonHeight + 80)), Game.buttonWidth, Game.buttonHeight)){ //Exit
+      } else if (mouse.hover(Scoreboard.x + ((Game.buttonWidth + 140)), Scoreboard.y + ((Game.buttonHeight + 80)), Game.buttonWidth, Game.buttonHeight)) { //Exit
         Save.saveGame("Savefile.txt")
         sys.exit()
       }
-    }else if(state == State.GAME && mousePressed){
-      
+    } else if (state == State.GAME && mousePressed) {
+      if (mouse.hover(950, 10, 180, 80)) {
+        if(Game.gameIsOn){
+        	state = State.PAUSEMENU
+     			lastState = State.PAUSEMENU          
+        }else{
+          state = State.STARTMENU
+     			lastState = State.STARTMENU
+        }
+          
+      }
+    } else if (state == State.HELP && mousePressed) {
+      if (mouse.hover(10, 10, 180, 80)) {
+        state = lastState
+      }
     }
   }
 
@@ -291,14 +329,16 @@ class Cassino extends PApplet {
     if (keyCode == VK_TAB) {
       Scoreboard.isPressed = true
     }
-    
-    if(key == 'p' || key == 'P'){
-      if(state == State.PAUSEMENU || state == State.HELP)
+
+    if (key == 'p' || key == 'P') {
+      if (state == State.PAUSEMENU)
         state = State.GAME
-      else if(state == State.GAME)
+      else if (state == State.GAME) {
         state = State.PAUSEMENU
+        lastState = State.PAUSEMENU
+      }
     }
-      
+
   }
 
   override def keyReleased() = {
@@ -378,18 +418,18 @@ class Cassino extends PApplet {
     Deck.cardback = loadImage("cardback.png")
 
     Deck.cardImages = Map[String, PImage]("h01" -> Deck.h01, "s01" -> Deck.s01, "d01" -> Deck.d01, "c01" -> Deck.c01,
-                                          "h02" -> Deck.h02, "s02" -> Deck.s02, "d02" -> Deck.d02, "c02" -> Deck.c02,
-                                          "h03" -> Deck.h03, "s03" -> Deck.s03, "d03" -> Deck.d03, "c03" -> Deck.c03,
-                                          "h04" -> Deck.h04, "s04" -> Deck.s04, "d04" -> Deck.d04, "c04" -> Deck.c04,
-                                          "h05" -> Deck.h05, "s05" -> Deck.s05, "d05" -> Deck.d05, "c05" -> Deck.c05,
-                                          "h06" -> Deck.h06, "s06" -> Deck.s06, "d06" -> Deck.d06, "c06" -> Deck.c06,
-                                          "h07" -> Deck.h07, "s07" -> Deck.s07, "d07" -> Deck.d07, "c07" -> Deck.c07,
-                                          "h08" -> Deck.h08, "s08" -> Deck.s08, "d08" -> Deck.d08, "c08" -> Deck.c08,
-                                          "h09" -> Deck.h09, "s09" -> Deck.s09, "d09" -> Deck.d09, "c09" -> Deck.c09,
-                                          "h10" -> Deck.h10, "s10" -> Deck.s10, "d10" -> Deck.d10, "c10" -> Deck.c10,
-                                          "h11" -> Deck.h11, "s11" -> Deck.s11, "d11" -> Deck.d11, "c11" -> Deck.c11,
-                                          "h12" -> Deck.h12, "s12" -> Deck.s12, "d12" -> Deck.d12, "c12" -> Deck.c12,
-                                          "h13" -> Deck.h13, "s13" -> Deck.s13, "d13" -> Deck.d13, "c13" -> Deck.c13)
+      "h02" -> Deck.h02, "s02" -> Deck.s02, "d02" -> Deck.d02, "c02" -> Deck.c02,
+      "h03" -> Deck.h03, "s03" -> Deck.s03, "d03" -> Deck.d03, "c03" -> Deck.c03,
+      "h04" -> Deck.h04, "s04" -> Deck.s04, "d04" -> Deck.d04, "c04" -> Deck.c04,
+      "h05" -> Deck.h05, "s05" -> Deck.s05, "d05" -> Deck.d05, "c05" -> Deck.c05,
+      "h06" -> Deck.h06, "s06" -> Deck.s06, "d06" -> Deck.d06, "c06" -> Deck.c06,
+      "h07" -> Deck.h07, "s07" -> Deck.s07, "d07" -> Deck.d07, "c07" -> Deck.c07,
+      "h08" -> Deck.h08, "s08" -> Deck.s08, "d08" -> Deck.d08, "c08" -> Deck.c08,
+      "h09" -> Deck.h09, "s09" -> Deck.s09, "d09" -> Deck.d09, "c09" -> Deck.c09,
+      "h10" -> Deck.h10, "s10" -> Deck.s10, "d10" -> Deck.d10, "c10" -> Deck.c10,
+      "h11" -> Deck.h11, "s11" -> Deck.s11, "d11" -> Deck.d11, "c11" -> Deck.c11,
+      "h12" -> Deck.h12, "s12" -> Deck.s12, "d12" -> Deck.d12, "c12" -> Deck.c12,
+      "h13" -> Deck.h13, "s13" -> Deck.s13, "d13" -> Deck.d13, "c13" -> Deck.c13)
 
   }
 }
