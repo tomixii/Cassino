@@ -88,6 +88,7 @@ object Load {
           }
         } while (!text(line).startsWith("#"))
       }
+      println(hand.map(_.value))
       Game.players += new Player("Player " + (playersRead + 1), hand, collected, score, cottages)
     }
 

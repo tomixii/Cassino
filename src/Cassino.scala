@@ -13,11 +13,10 @@ class Cassino extends PApplet {
   var computerCounter = 0
   var changeCounter = 0
   var playedCard: Option[Card] = None
-  var debug = false
+  var debug = true
   var nextPlayer = false
   var state = State.STARTMENU
   var lastState = State.STARTMENU
-  var changingRound = false
 
   override def setup() = {
     loadImages
@@ -28,8 +27,8 @@ class Cassino extends PApplet {
     Deck.deck.clear
     Board.cards.clear
     Deck.shuffleDeck
+    Game.playerCount = Game.newplayerCount
     Game.addPlayer(false, new Player("Player 1", Buffer[Card](), Buffer[Card](), 0, 0))
-    Game.dealer = Some(Game.players.head)
     for (i <- 0 until Game.playerCount - 1)
       Game.addPlayer(true, new Player("Player " + (i + 2), Buffer[Card](), Buffer[Card](), 0, 0))
     for (player <- Game.players) {
@@ -40,7 +39,13 @@ class Cassino extends PApplet {
       Board.addCard(Deck.deck(0))
       Deck.deck.pop
     }
+    Game.dealer = Some(Game.players.last)
+    changeCounter = 0
+    Game.turn = 0
+    Game.changingRound = false
+    nextPlayer = false
     state = State.GAME
+    Game.gameIsOn = true
   }
 
   override def settings() = {
@@ -51,10 +56,10 @@ class Cassino extends PApplet {
     background(0, 120, 0)
     if (state == State.GAME) {
       if (Game.gameIsOn) {
-        if (!changingRound) {
+        if (!Game.changingRound) {
           updateCards
         }
-        if (changingRound) {
+        if (Game.changingRound) {
           if (changeCounter % 60 == 0) {
             for (i <- 0 until Game.players.size) {
               Game.players(i).drawCard(Deck.deck(0))
@@ -65,7 +70,7 @@ class Cassino extends PApplet {
           }
           if (changeCounter == 239) {
             changeCounter = 0
-            changingRound = false
+            Game.changingRound = false
           } else
             changeCounter += 1
 
@@ -75,21 +80,12 @@ class Cassino extends PApplet {
         noFill
         strokeWeight(2)
         stroke(0, 0, 0)
-        rect(Board.x, Board.y, Board.width, Board.height)
-        if (Scoreboard.isPressed || changingRound) showScores
-        if (counter == 60 && debug) {
-          for (player <- Game.players)
-            println(Game.players.indexOf(player) + ": " + player.collected.map(_.valueOnHand))
-          println("turn: " + Game.turn)
-          println("player hand size: " + Game.players(0).hand.size)
-          println("board selected sum: " + Board.cards.filter(_.selected).map(_.value).sum)
-          println(Board.cards.filter(_.selected).map(_.value))
-        }
-        if (!Deck.deck.isEmpty && Game.players(Game.turn).hand.size < 4 && !changingRound)
+//        rect(Board.x, Board.y, Board.width, Board.height)
+        if (Scoreboard.isPressed || Game.changingRound) showScores
+        if (!Deck.deck.isEmpty && Game.players(Game.turn).hand.size < 4 && !Game.changingRound)
           Game.players(Game.turn).drawCard(Deck.deck(0))
         if (Game.players.forall(_.hand.isEmpty) && Game.gameIsOn) {
           Game.endOfRound
-          changingRound = true
         } else if (nextPlayer) {
           nextPlayer = false
           Game.nextTurn
@@ -97,8 +93,8 @@ class Cassino extends PApplet {
       } else {
         if(changeCounter < 30){
         	fill(255,0,0)
-        	textSize(80)
-        	text("Game over! Winner is " + Game.winner, 200, 80)          
+        	textSize(50)
+        	text("Game over! Winner is " + Game.winner, 180, 80)          
         }
         showScores
         if(changeCounter == 60) changeCounter = 0 else changeCounter += 1
@@ -111,14 +107,16 @@ class Cassino extends PApplet {
     } else if (state == State.STARTMENU || state == State.PAUSEMENU) {
       showMenu
     } else if (state == State.HELP) {
-      fill(160, 160, 160, 230)
-      rect(10, 10, 180, 80)
-      fill(0, 0, 0, 230)
-      textSize(40)
-      text("Back", 50, 65)
+      showHelp
     }
-
-    handleButtons
+    if (counter == 60 && debug) {
+//          for (player <- Game.players)
+//            println(Game.players.indexOf(player) + ": " + player.collected.map(_.valueOnHand))
+//          println("turn: " + Game.turn)
+//          println("player hand size: " + Game.players(0).hand.size)
+//          println("board selected sum: " + Board.cards.filter(_.selected).map(_.value).sum)
+//          println(Board.cards.filter(_.selected).map(_.value))
+    }
 
     fill(255, 0, 0)
     textSize(24)
@@ -129,11 +127,11 @@ class Cassino extends PApplet {
 
   def renderCards = {
     for (card <- Board.cards) {
-      if (mouse.hover(card.x, card.y, card.width, card.height) && mousePressed && card.clicktimer == 0) {
-        card.selected = !card.selected
-        card.clicktimer = 10
-      }
-      card.clicktimer = max(card.clicktimer - 1, 0)
+//      if (mouse.hover(card.x, card.y, card.width, card.height) && mousePressed && card.clicktimer == 0) {
+//        card.selected = !card.selected
+//        card.clicktimer = 10
+//      }
+//      card.clicktimer = max(card.clicktimer - 1, 0)
 
       card.x = Board.x + (Board.cards.indexOf(card)) % 4 * (card.width + 7)
       card.y = Board.y + (Board.cards.indexOf(card)) / 4 * (card.height + 7)
@@ -166,7 +164,7 @@ class Cassino extends PApplet {
         pushMatrix()
         translate(width / 2, height / 2)
         rotate((player * (360 / Game.playerCount)).toRadians.toFloat)
-        image(card.img, card.x, card.y, card.width, card.height)
+        image(Deck.cardback, card.x, card.y, card.width, card.height)
         popMatrix()
       }
     }
@@ -272,21 +270,55 @@ class Cassino extends PApplet {
       rect(Scoreboard.x + ((Game.buttonWidth + 140) * (i % 2)), Scoreboard.y + ((Game.buttonHeight + 80) * (i / 2)), Game.buttonWidth, Game.buttonHeight)
       fill(0, 0, 0, 230)
       textSize(40)
-      if (state == State.STARTMENU)
-        text(Game.startStrings(i), Scoreboard.x + ((Game.buttonWidth + 140) * (i % 2)) + Game.buttonWidth / 2 - 10 * Game.startStrings(i).length(), Scoreboard.y + ((Game.buttonHeight + 80) * (i / 2)) + Game.buttonHeight / 2 + 15)
-      else if (state == State.PAUSEMENU)
-        text(Game.pauseStrings(i), Scoreboard.x + ((Game.buttonWidth + 140) * (i % 2)) + Game.buttonWidth / 2 - 10 * Game.pauseStrings(i).length(), Scoreboard.y + ((Game.buttonHeight + 80) * (i / 2)) + Game.buttonHeight / 2 + 15)
+      if (state == State.STARTMENU){
+//        println("startmenu")
+    	  text(Game.startStrings(i), Scoreboard.x + ((Game.buttonWidth + 140) * (i % 2)) + Game.buttonWidth / 2 - 10 * Game.startStrings(i).length(), Scoreboard.y + ((Game.buttonHeight + 80) * (i / 2)) + Game.buttonHeight / 2 + 15)
+      }else if (state == State.PAUSEMENU){
+//        println("pausemenu")        
+    	  text(Game.pauseStrings(i), Scoreboard.x + ((Game.buttonWidth + 140) * (i % 2)) + Game.buttonWidth / 2 - 10 * Game.pauseStrings(i).length(), Scoreboard.y + ((Game.buttonHeight + 80) * (i / 2)) + Game.buttonHeight / 2 + 15)
+      }
     }
   }
-
-  def handleButtons = {
-    if (state == State.STARTMENU && mousePressed) {
+  
+  def showHelp = {
+    
+      fill(160, 160, 160, 230)
+      rect(10, 10, 180, 80)
+      rect(10, 100, 1120, 570)
+        for(i <- 1 to 11){
+    		  if(Game.newplayerCount == i + 1) stroke(255,0,0) else stroke(0,0,0)        
+    		  rect(i * 90, 350, 60, 60)
+    	  }        
+      fill(0, 0, 0, 230)
+      textSize(40)
+      text("Back", 50, 65)
+        for(i <- 1 to 11){
+    		  if(i.toString().length() == 1)
+    			  text(i, i * 90 + 15, 395)
+    			  else  
+    				  text(i, i * 90 + 5, 395)
+    	  }
+      textSize(20)
+      text("Drag and drop card in the middle of board to play it. \n" +
+           "Select cards you want to collect and then the card from your hand to collect the cards from board. \n \n" +
+           "[P] = Pause \n" +
+           "[TAB] = Scoreboard\n\n" +
+           "Number of CPUs:",
+           20, 130)
+  }
+  
+  override def mouseClicked() = {
+    if (state == State.STARTMENU) {
       if (mouse.hover(Scoreboard.x, Scoreboard.y, Game.buttonWidth, Game.buttonHeight)) { //Load game
+        Game.players.clear
         var data = ""
         for (line <- Source.fromFile("Savefile.txt").getLines())
           data = data + line + "\n"
-        println(data)
+//        println(data)
         Load.loadGame(new StringReader(data))
+        println(Game.players.size)
+        Game.gameIsOn = true
+        nextPlayer = false
         state = State.GAME
       } else if (mouse.hover(Scoreboard.x + ((Game.buttonWidth + 140)), Scoreboard.y, Game.buttonWidth, Game.buttonHeight)) { //New Game
         newGame
@@ -295,18 +327,18 @@ class Cassino extends PApplet {
       } else if (mouse.hover(Scoreboard.x + ((Game.buttonWidth + 140)), Scoreboard.y + ((Game.buttonHeight + 80)), Game.buttonWidth, Game.buttonHeight)) { //Exit
         sys.exit()
       }
-    } else if (state == State.PAUSEMENU && mousePressed) {
-      if (mouse.hover(Scoreboard.x, Scoreboard.y, Game.buttonWidth, Game.buttonHeight)) { //Continue
+    } else if (state == State.PAUSEMENU) {
+      if (mouse.hover(Scoreboard.x, Scoreboard.y, Game.buttonWidth, Game.buttonHeight)) { //Resume
         state = State.GAME
       } else if (mouse.hover(Scoreboard.x + ((Game.buttonWidth + 140)), Scoreboard.y, Game.buttonWidth, Game.buttonHeight)) { //New Game
-        newGame
+        state = State.STARTMENU
       } else if (mouse.hover(Scoreboard.x, Scoreboard.y + ((Game.buttonHeight + 80)), Game.buttonWidth, Game.buttonHeight)) { //Help
         state = State.HELP
       } else if (mouse.hover(Scoreboard.x + ((Game.buttonWidth + 140)), Scoreboard.y + ((Game.buttonHeight + 80)), Game.buttonWidth, Game.buttonHeight)) { //Exit
         Save.saveGame("Savefile.txt")
         sys.exit()
       }
-    } else if (state == State.GAME && mousePressed) {
+    } else if (state == State.GAME) {
       if (mouse.hover(950, 10, 180, 80)) {
         if(Game.gameIsOn){
         	state = State.PAUSEMENU
@@ -315,12 +347,20 @@ class Cassino extends PApplet {
           state = State.STARTMENU
      			lastState = State.STARTMENU
         }
-          
       }
-    } else if (state == State.HELP && mousePressed) {
+      for (card <- Board.cards) {
+    	  if (mouse.hover(card.x, card.y, card.width, card.height)) {
+    		  card.selected = !card.selected
+    	  }
+      }  
+    } else if (state == State.HELP) {
       if (mouse.hover(10, 10, 180, 80)) {
         state = lastState
       }
+        for(i <- 1 to 11){
+    		  if (mouse.hover(i*90, 350, 60, 60))
+    			  Game.newplayerCount = i + 1
+    	  }        
     }
   }
 
