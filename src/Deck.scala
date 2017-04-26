@@ -5,7 +5,7 @@ import scala.collection.mutable.HashMap
 import scala.collection.mutable.Stack
 
 object Deck {
-  
+  //variables for each card's image
 	var h01 = new PImage
   var h02 = new PImage
   var h03 = new PImage
@@ -66,6 +66,8 @@ object Deck {
   
   var deck = Stack[Card]()
   var cardImages = Map[String, PImage]()
+ 
+  //card "names" for keeping them better in order
   var cardStrings = Buffer[String]("h01", "s01", "d01", "c01",
                                    "h02", "s02", "d02", "c02",
                                    "h03", "s03", "d03", "c03",
@@ -80,6 +82,7 @@ object Deck {
                                    "h12", "s12", "d12", "c12",
                                    "h13", "s13", "d13", "c13")
   
+  //create new deck with new random order
   def shuffleDeck = {
     for(i <- 0 until 52){
     	deck.push(new Card(i / 4 + 1, i % 4, i, this.cardImages(cardStrings(i))))

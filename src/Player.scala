@@ -2,17 +2,15 @@ import scala.collection.mutable.Buffer
 import processing.core._
 
 
-class Player(val name: String, var hand: Buffer[Card], var collected: Buffer[Card], var score: Int, var cottages: Int) {
+class Player(val name: String, var hand: Buffer[Card], var collected: Buffer[Card], var score: Int, var sweeps: Int) {
   
-  def scoreCount: Int = score
-  def spadeCount: Int = collected.filter(_.suit == 1).size  
-  def aceCount: Int = collected.filter(_.value == 1).size
-  def cardCount: Int = collected.size
-  def cottageCount: Int = cottages
-  var updateOnce = false
-  var loop = 0
-  var possibilities = Buffer[(Card, Buffer[Buffer[Card]])]()
-  def points = Vector[String](name, scoreCount.toString, spadeCount.toString, aceCount.toString, cardCount.toString, cottageCount.toString) 
+  def scoreCount: Int = score //player's whole game score
+  def spadeCount: Int = collected.filter(_.suit == 1).size //spade count for this round 
+  def aceCount: Int = collected.filter(_.value == 1).size  //ace count for this round
+  def cardCount: Int = collected.size  //card count for this round
+  def sweepCount: Int = sweeps //sweep count for this round
+  var possibilities = Buffer[(Card, Buffer[Buffer[Card]])]() //all possible combinations for player's cards
+  def points = Vector[String](name, scoreCount.toString, spadeCount.toString, aceCount.toString, cardCount.toString, sweepCount.toString) //string represantions for player's different point counts
   
   def drawCard(card: Card){
      hand += card
@@ -23,98 +21,68 @@ class Player(val name: String, var hand: Buffer[Card], var collected: Buffer[Car
     hand -= card
   }
   
-  def takeCards(cards: Buffer[Card]) = {
-    collected = collected ++ cards
-    Board.removeCard(cards)
-    if(Board.cards.isEmpty) cottages += 1
+  def takeCards(cards: Buffer[Card]) = { // collect cards from the table
+    collected = collected ++ cards //add cards to collected cards
+    Board.removeCards(cards)
+    if(Board.cards.isEmpty) sweeps += 1 //adds sweeps if taking cards from table empties it
+    var pair = (this, cards)
+    if(Game.history.size >= Game.playerCount) Game.history(Game.turn) = (this, cards) else Game.history += pair //add (player, collected cards) pair to play history
+  }
+  
+  def playCard(card: Card) = {
+     Board.addCard(card)
+     Game.playedCard = Some(card)
+     var pair = (this, Buffer[Card](Game.playedCard.get))
+     if(Game.history.size >= Game.playerCount) Game.history(Game.turn) = (this, Buffer[Card](card)) else Game.history += pair //add (player, played card) pair to play history
+     Game.nextPlayer = true
   }
 
   def addScore = score += 1
   
-  def deactivateAll = {
+  def deactivateAll = { //deactives all player's cards
     for(card <- hand){
       setDown(card)     
     	card.active = false
     }
   }
   
-  def setUp(card: Card) = {
+  def setUp(card: Card) = { //sets card on up position
     card.x = 15 *(34 + Game.players(0).hand.indexOf(card))
     card.y = 540 //up position y
   }
   
-  def setDown(card: Card) = {
+  def setDown(card: Card) = { //sets card on down position
     card.x = 15 * (34 + Game.players(0).hand.indexOf(card))
     card.y = 560 //down position y
   }
   
   
-  def pointCount(pair: (Card,Buffer[Buffer[Card]])): Double = {
+  def pointCount(pair: (Card,Buffer[Buffer[Card]])): Double = { //counts points for all possible combinations, more points the better combination
     var count = 0.0
     var together: Buffer[Card] = pair._2.flatten 
     together += pair._1
     for(i <- 14 to 16)
-      count += together.count(_.valueOnHand == i)
-    count += together.count(_.suit == 1) / 5 + together.size  
-    count  
+      count += together.count(_.valueOnHand == i) //counts all aces and 2 of spades and 10 of diamonds
+    count += together.count(_.suit == 1) / 5 + together.size  //counts all spades
+    count  //returns how many points the combination got
   }
   
-  def makeBuffer(pair: (Card, Buffer[Buffer[Card]])): Buffer[Card] = pair._2.flatten :+ pair._1
+  def makeBuffer(pair: (Card, Buffer[Buffer[Card]])): Buffer[Card] = pair._2.flatten :+ pair._1 //makes buffer from a tuple
 
-  def chooseBest: Option[Buffer[Card]] = {
-//    println("poss: " + possibilities.map(x => (x._1.valueOnHand, x._2.map(y => y.map(z => z.valueOnHand)))))
-//    println("chosen cards: " + makeBuffer(possibilities.maxBy(pointCount)).map(_.valueOnHand))
+  def chooseBest: Option[Buffer[Card]] = { //choses best combination by maximum points(most aces/spades etc.)
     if(!possibilities.isEmpty)
-      Some(makeBuffer(possibilities.maxBy(pointCount)))
+      Some(makeBuffer(possibilities.maxBy(pointCount)).reverse)
     else 
       None
   }
   
-  def sortHand = {
+  def sortHand = { //sorts hand so best card to play on board is first and worst cards(aces and such) are last
     hand = this.hand.sortBy(_.valueOnHand)
     var fine     = this.hand.filter(x => x.suit != 1 && (x.valueOnHand + Board.cards.map(_.value).sum > 16) && x.valueOnHand <= 13)
     var tooSmall = this.hand.filter(x => x.suit != 1 && (x.valueOnHand + Board.cards.map(_.value).sum <= 16) && x.valueOnHand <= 13)
     var spades   = this.hand.filter(x => x.suit == 1 && x.valueOnHand < 14)
     var aces     = this.hand.filter(x => x.suit != 1 && x.valueOnHand == 14)
     var topCards = this.hand.filter(x => x.valueOnHand >= 15 || (x.valueOnHand == 14 && x.suit == 1))
-//    println(fine.map(_.valueOnHand) + "+" + tooSmall.map(_.valueOnHand) + "+" + spades.map(_.valueOnHand) + "+" + aces.map(_.valueOnHand) + "+" + topCards.map(_.valueOnHand))
     hand = fine ++ tooSmall ++ spades ++ aces ++ topCards
   }
-
-                 
-//    var diamonds10 = Buffer[Buffer[Buffer[Card]]]()
-//    var spades2    = Buffer[Buffer[Buffer[Card]]]()
-//    var aces       = Buffer[Buffer[Buffer[Card]]]()
-//    var spades     = Buffer[Buffer[Buffer[Card]]]()
-//    for(buff <- possibilities.values){
-//      for(innerBuff <- buff){
-//        if(innerBuff.flatten.map(_.valueOnHand).contains(16))
-//          diamonds10 += innerBuff
-//        if(innerBuff.flatten.map(_.valueOnHand).contains(15))
-//          spades2 += innerBuff
-//        if(innerBuff.flatten.map(_.valueOnHand).contains(14))
-//          aces += innerBuff
-//        if(innerBuff.flatten.map(_.suit).contains(1))
-//          spades += innerBuff   
-//      }
-//    }  
-//      
-//    
-//    if(!diamonds10.isEmpty)
-//      (hand.filter(_.valueOnHand == diamonds10.maxBy(_.flatten.size).head.map(_.value).sum)(0), diamonds10.maxBy(_.flatten.size))
-//    else if(possibilities.exists(_._1.valueOnHand == 16))
-//      (possibilities.keySet.filter(_.valueOnHand == 16).head, possibilities(possibilities.keySet.filter(_.valueOnHand == 16).head).head)
-//    else if(!spades2.isEmpty)
-//      (hand.filter(_.valueOnHand == spades2.maxBy(_.flatten.size).head.map(_.value).sum)(0), spades2.maxBy(_.flatten.size))
-//    else if(possibilities.exists(_._1.valueOnHand == 15))
-//      (possibilities.keySet.filter(_.valueOnHand == 15).head, possibilities(possibilities.keySet.filter(_.valueOnHand == 15).head).head)
-//    else if(!aces.isEmpty)
-//      (hand.filter(_.valueOnHand == aces.maxBy(_.flatten.filter(_.value == 1).size).head.map(_.value).sum)(0), aces.maxBy(_.flatten.filter(_.value == 1).size))
-//    else if(!spades.isEmpty)
-//      (hand.filter(_.valueOnHand == spades.maxBy(_.flatten.filter(_.value == 1).size).head.map(_.value).sum)(0), spades.maxBy(_.flatten.filter(_.value == 1).size))
-//    else
-//      (possibilities.maxBy(_._2.maxBy(_.flatten.size).size)._1, possibilities.maxBy(_._2.maxBy(_.flatten.size).size)._2(0))
-//    
-//  }
-  
 }

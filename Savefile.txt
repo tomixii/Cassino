@@ -1,26 +1,27 @@
-#Player 1
-hand: d13
-collected: d07,c07,h05,c05,h04,h09,d01,h08,s08,h12,s12
-score: 8
-cottages: 3
-#Player 2
-hand: 
-collected: s01,c02,d03,d06,h06,d12,c12,c06,s06,c03,h03
-score: 1
-cottages: 2
-#Player 3
-hand: 
-collected: d04,c04,h02,h07,s09,s03,s10,h01,s13,d01,s02,s04,s07
-score: 3
-cottages: 1
-#Player 4
-hand: 
-collected: c08,d08,d09,c09,d02,c11,c13,d11,h11,c10,h10,d05,s11,d10
-score: 3
-cottages: 2
+#Player
+hand: c03,d06,s12,c08
+collected: 
+score: 0
+cottages: 0
+#CPU 1
+hand: s08,c10,s03,h13
+collected: 
+score: 0
+cottages: 0
+#CPU 2
+hand: h09,h06,c09,h10
+collected: 
+score: 0
+cottages: 0
+#CPU 3
+hand: s04,c02,c07,c01
+collected: 
+score: 0
+cottages: 0
 #GAME
-board: h13,s05
-deck: 
-turn: 0
-dealer: 0
+board: s05,h05,d08,d09,s11
+deck: h01,d10,d12,h03,h11,s01,s10,d13,h12,d04,s07,d07,d11,d05,c11,c05,d01,s06,c06,s02,h02,c13,h04,h07,d02,c12,c04,d03,s09,h08,s13
+history: Player;s11,CPU 1;,CPU 2;,CPU 3;
+turn: 1
+dealer: 3
 playerCount: 4
