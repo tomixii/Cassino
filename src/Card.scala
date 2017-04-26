@@ -29,7 +29,7 @@ class Card(val value: Int, val suit: Int, val number: Int, val img: PImage) {
     Board.res.clear()
   }
   
-  //checks if selected cards exists in the possible combinations for the card
+  //checks if all selected cards exists in one of the possible combinations for the card
   def pressForPoints: Boolean = {
     Game.players(Game.turn).possibilities.map(x => (x._1, x._2.flatten)).exists(x => (x._1, x._2.sortBy(_.value)) == (this, Board.cards.filter(_.selected).sortBy(_.value)))
   }

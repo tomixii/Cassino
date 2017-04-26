@@ -11,7 +11,7 @@ object Save {
     	writer.write("hand: " + Game.players(i).hand.map(makeString).mkString(",") + "\n")
     	writer.write("collected: " + Game.players(i).collected.map(makeString).mkString(",") + "\n")
     	writer.write("score: " + Game.players(i).score + "\n")
-    	writer.write("cottages: " + Game.players(i).sweeps + "\n")
+    	writer.write("sweeps: " + Game.players(i).sweeps + "\n")
     }
     
     writer.write("#GAME\n") // write game's info in file

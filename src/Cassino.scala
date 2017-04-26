@@ -9,10 +9,8 @@ import scala.io.Source
 class Cassino extends PApplet {
 
   var mouse = new Mouse(this)
-  var debugcounter = 0        //only for debug purposes
   var computerCounter = 0     //timer for slowing CPU players' turns 
-  var debug = true            //only for debug purposes
-  
+  var loadfile = true         //is there loadfile?
 
   override def setup() = {
     loadImages              //load all the images for cards
@@ -67,25 +65,6 @@ class Cassino extends PApplet {
     } else if (Game.state == State.HELP) {  //show help screen
       showHelp
     }
-    /*
-     * ONLY FOR DEBUGGING
-     */
-    if (debug) {
-    	fill(255, 0, 0)
-    	textSize(24)
-    	text("X: " + mouseX + "\n" + "Y: " + mouseY, mouseX + 20, mouseY)
-      if(debugcounter == 60){
-      //          for (player <- Game.players)
-      //            println(Game.players.indexOf(player) + ": " + player.collected.map(_.valueOnHand))
-      //          println("turn: " + Game.turn)
-      //          println("player hand size: " + Game.players(0).hand.size)
-      //          println("board selected sum: " + Board.cards.filter(_.selected).map(_.value).sum)
-      //          println(Board.cards.filter(_.selected).map(_.value))
-      }   
-    }
-    if (debugcounter == 61) debugcounter = 0
-    debugcounter += 1
-
   }
 
   // renders cards 
@@ -166,6 +145,8 @@ class Cassino extends PApplet {
         Game.nextPlayer = true
 
       }
+      for(card <- Game.players(0).hand)
+        Game.players(0).setDown(card)
       if (computerCounter == 120) computerCounter = 0 else computerCounter += 1
     }
   }
@@ -236,6 +217,11 @@ class Cassino extends PApplet {
         text(Game.pauseStrings(i), Scoreboard.x + ((Game.buttonWidth + 140) * (i % 2)) + Game.buttonWidth / 2 - 10 * Game.pauseStrings(i).length(), Scoreboard.y + ((Game.buttonHeight + 80) * (i / 2)) + Game.buttonHeight / 2 + 15)
       }
     }
+    if(!loadfile){
+      color("red")
+      text("No loadfile found",130,90)
+    }
+      
   }
 
   def showHelp = { //shows help screen, where user can find tips, controls and choose how many CPU's he/she wants
@@ -281,10 +267,15 @@ class Cassino extends PApplet {
         var data = ""
         for (line <- Source.fromFile("Savefile.txt").getLines()) // get info from savefile
           data = data + line + "\n"
-        Load.loadGame(new StringReader(data)) //loads the data
-        Game.gameIsOn = true
-        Game.nextPlayer = false
-        Game.state = State.GAME
+        if(!data.isEmpty){
+          loadfile = true
+        	Load.loadGame(new StringReader(data)) //loads the data
+        	Game.gameIsOn = true
+        	Game.nextPlayer = false
+        	Game.state = State.GAME          
+        }else{
+          loadfile = false
+        }
       } else if (mouse.hover(Scoreboard.x + ((Game.buttonWidth + 140)), Scoreboard.y, Game.buttonWidth, Game.buttonHeight)) { //New Game
         Game.newGame
       } else if (mouse.hover(Scoreboard.x, Scoreboard.y + ((Game.buttonHeight + 80)), Game.buttonWidth, Game.buttonHeight)) { //Help

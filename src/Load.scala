@@ -10,13 +10,13 @@ object Load {
     var currentLine = lineReader.readLine()
     var text = Buffer[String]() //file in bufferform
     var line = 0 //starting line
-    var fileRead = false 
+    var fileRead = false
     var playersRead = 0 //how many player have been read already
     var playerName = ""
 
     def isValidLine: Boolean = {
       if (!fileRead) {
-        !text(line).startsWith("#") 
+        !text(line).startsWith("#")
       } else {
         false
       }
@@ -35,7 +35,7 @@ object Load {
       } else if (text(line).toUpperCase() == "#GAME".toUpperCase()) { //load game variables and buffers elements
         readGameInfo
       }
-      if(line + 1 < text.size)
+      if (line + 1 < text.size)
         if (!text(line).startsWith("#")) //go to next line 
           line = math.min(line + 1, text.size)
     }
@@ -52,9 +52,9 @@ object Load {
     def getNumber(s: String): Int = 4 * (getValue(s.tail) - 1) + getSuit(s.head) //get card number from card string
 
     def getImage(s: String) = Deck.cardImages(Deck.cardStrings(getNumber(s))) //get image from card string
-    
+
     def makeCard(str: String): Card = new Card(getValue(str.tail), getSuit(str.head), getNumber(str), getImage(str)) //make card from the info card string gives
-    
+
     def readPlayerInfo = {
       var hand = Buffer[Card]()
       var collected = Buffer[Card]()
@@ -93,20 +93,23 @@ object Load {
       if (line < text.size) {
         do {
           if (text(line).toLowerCase().startsWith("board".toLowerCase())) { //board cards info
-            Board.cards = text(line).split(":")(1).trim.split(",").map(makeCard).toBuffer
+            if (!text(line).split(":")(1).trim.isEmpty)
+              Board.cards = text(line).split(":")(1).trim.split(",").map(makeCard).toBuffer
           } else if (text(line).toLowerCase().startsWith("deck".toLowerCase())) { //deck info
-            var cards = text(line).split(":")(1).trim.split(",")
-            for (s <- cards) {
-              if (!s.isEmpty) {
-                var card = new Card(getValue(s.tail), getSuit(s.head), getNumber(s), getImage(s))
-                Deck.addCard(card)
+              var cards = text(line).split(":")(1).trim.split(",")
+              for (s <- cards) {
+                if (!s.isEmpty) {
+                  var card = new Card(getValue(s.tail), getSuit(s.head), getNumber(s), getImage(s))
+                  Deck.addCard(card)
+                }
               }
-            }
-          } else if (text(line).toLowerCase().startsWith("history".toLowerCase())){ //play history info
+          } else if (text(line).toLowerCase().startsWith("history".toLowerCase())) { //play history info
             var pairs = text(line).split(":")(1).trim.split(",")
-            for(pair <- pairs){
-              var helpvar = (Game.players.find(_.name == pair.split(";")(0)).get, pair.split(";")(1).split("-").map(makeCard).toBuffer)            
-            	Game.history += helpvar
+            for (pair <- pairs) {
+              var player = Game.players.find(_.name == pair.split(";")(0)).get
+              var cards = if (pair.split(";").size > 1) pair.split(";")(1).split("-").map(makeCard).toBuffer else Buffer[Card]()
+              var temp = (player, cards)
+              Game.history += temp
             }
           } else if (text(line).toLowerCase().startsWith("turn".toLowerCase())) { //turn info
             Game.turn = text(line).split(":")(1).trim.toInt
@@ -114,9 +117,9 @@ object Load {
             Game.dealer = Some(Game.players(text(line).split(":")(1).trim.toInt))
           } else if (text(line).toLowerCase().startsWith("playerCount".toLowerCase())) { //player count info
             Game.playerCount = text(line).split(":")(1).trim.toInt
-          }  
+          }
           line = math.min(line + 1, text.size)
-    		  fileRead = text.size == line //true if all the info is read
+          fileRead = text.size == line //true if all the info is read
         } while (isValidLine)
       }
     }

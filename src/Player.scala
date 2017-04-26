@@ -26,14 +26,14 @@ class Player(val name: String, var hand: Buffer[Card], var collected: Buffer[Car
     Board.removeCards(cards)
     if(Board.cards.isEmpty) sweeps += 1 //adds sweeps if taking cards from table empties it
     var pair = (this, cards)
-    if(Game.history.size >= Game.playerCount) Game.history(Game.turn) = (this, cards) else Game.history += pair //add (player, collected cards) pair to play history
+    Game.history(Game.turn) = (this, cards) //add (player, collected cards) pair to play history
   }
   
   def playCard(card: Card) = {
      Board.addCard(card)
      Game.playedCard = Some(card)
      var pair = (this, Buffer[Card](Game.playedCard.get))
-     if(Game.history.size >= Game.playerCount) Game.history(Game.turn) = (this, Buffer[Card](card)) else Game.history += pair //add (player, played card) pair to play history
+     Game.history(Game.turn) = (this, Buffer[Card](card))//add (player, played card) pair to play history
      Game.nextPlayer = true
   }
 
