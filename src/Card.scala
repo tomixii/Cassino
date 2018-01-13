@@ -24,7 +24,7 @@ class Card(val value: Int, val suit: Int, val number: Int, val img: PImage) {
   }
   
   def checkForCards = {
-    var poss = Board.takeCards(Board.cards, Buffer[Card](), this.valueOnHand, this.valueOnHand) // all the possible combinations for the card
+    val poss = Board.takeCards(Board.cards, Buffer[Card](), this.valueOnHand, this.valueOnHand) // all the possible combinations for the card
     Game.players(Game.turn).possibilities = Game.players(Game.turn).possibilities ++ Board.findPossibilities(this, poss) //possible combinations where same card appears only once
     Board.res.clear()
   }

@@ -1,0 +1,27 @@
+#Player
+hand: h05,c01,h01,c04
+collected: 
+score: 1
+sweeps: 0
+#CPU 1
+hand: d06,h06,c06,h07
+collected: c13,s13
+score: 4
+sweeps: 0
+#CPU 2
+hand: h10,s04,s06,d13
+collected: c08,s08
+score: 2
+sweeps: 0
+#CPU 3
+hand: h09,s05,s02,d10
+collected: s01,h06,s03,s02,h02,h01
+score: 7
+sweeps: 0
+#GAME
+board: c09,h12
+deck: s12,h02,h11,d03,d01,s10,c07,s09,d04,d08,d11,s07,c10,d12,h03,d07,s01,h13,s11,d02,c11,d09,c05,c03,d05,c02,s03,c12,h04,h08
+history: Player;,CPU 1;c13-s13,CPU 2;c08-s08,CPU 3;s01-h06-s03-s02-h02-h01
+turn: 0
+dealer: 0
+playerCount: 4
